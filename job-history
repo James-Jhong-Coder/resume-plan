@@ -48,3 +48,20 @@ Video Player 點擊畫面播放功能
 12. 自己做一個播放器
 13. 多語系破版問題，不同的語系的 CSS
 
+
+2026/06/29
+實作會員報表 和額度紀錄
+
+在查帳那邊，通用版的查帳是舊會員都是北京時間 新會員可以是北京或是美東時間
+
+通常來說 props 傳入跟用 proved inject 的差別，從查帳 dialog 一路傳到 searchBar 在傳入到 select 下拉式選單這邊
+
+Css :is :where selector 對應到 tailwind 的 group 和 peer 用法
+
+查帳的內容 要查通用版
+
+籌碼的內容，
+
+Tailwind 撰寫的時候 比較習慣寫在 template 還是寫在 class 裡面
+
+
