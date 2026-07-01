@@ -65,3 +65,206 @@ Css :is :where selector 對應到 tailwind 的 group 和 peer 用法
 Tailwind 撰寫的時候 比較習慣寫在 template 還是寫在 class 裡面
 
 
+2026/06/30
+籌碼 sig 太多的話會造成 drag 事件會 lag 可以的話看是不是把它換成 base64 或是圖片
+
+Select 他的型別可以是數字或字串 那這個型別可以定義成一個 type  
+export type SelectOptionValue = string | number;
+
+export interface SelectOption {
+    text: string;
+    value: SelectOptionValue;
+}
+
+pixel 都是
+
+
+2026/07/01
+深色/淺色模式實作完整報告
+在這個 Vue 專案中，深色/淺色模式的實作是通過以下方式進行的：
+1. 主題狀態存儲位置
+檔案: src/bundle/common/ts/useRootStore.ts
+主題狀態存儲在全局響應式對象 rootData 中：
+
+/** 主題 */
+export enum ThemeMode {
+    NONE = "",
+    /** 淺色 */
+    LIGHT = "light",
+    /** 深色 */
+    DARK = "dark",
+}
+
+export const rootData = reactive({
+    // ... 其他屬性
+    // 深色模式 預留位 'light' 'dark' ''
+    themeMode: ThemeMode.NONE,
+    // ... 其他屬性
+});
+
+2. 切換主題函式位置與實現
+主要切換函式: src/bundle/common/ts/utils/Utils.ts (第 868-879 行)
+
+/**
+ * 設定當前顏色模式
+ * @param theme
+ */
+public static setTheme(theme: ThemeMode): void {
+    // 先移除舊的
+    if (rootData.themeMode != ThemeMode.NONE) {
+        document.documentElement.classList.remove(rootData.themeMode);
+    }
+
+    // 設定預設theme :預設為空
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.add(theme);
+
+    rootData.themeMode = theme;
+}
+Composable 封裝: src/bundle/common/ts/hook/useSystemSetting.ts
+
+const currentTheme = computed({
+    get: () => rootData.themeMode,
+    set: (mode: ThemeMode) => Utils.setTheme(mode),
+});
+UI 切換元件:
+* src/bundle/common/vue/components/panel/systemSetting/ThemeModeRadioGroup.vue - 淺色/深色模式選項按鈕
+* src/bundle/common/vue/components/dialogs/global/DialogMobileSystemSetting.vue - 手機系統設定面板
+* src/bundle/common/vue/components/TestCodePanel.vue - 測試用面板（第 11-12 行）
+
+<!-- TestCodePanel.vue 中的切換按鈕 -->
+<button class="btn" :class="[deviceClass, { current: rootData.themeMode === ThemeMode.LIGHT }]" @click="toggleTheme">
+    {{ rootData.themeMode === ThemeMode.LIGHT ? "淺色模式" : "深色模式" }}
+</button>
+切換函式：
+
+function toggleTheme() {
+    const newTheme = rootData.themeMode === ThemeMode.LIGHT ? ThemeMode.DARK : ThemeMode.LIGHT;
+    Utils.setTheme(newTheme);
+}
+
+3. CSS 實現層面
+a) HTML 根元素的 class 和 data-theme 屬性
+當 Utils.setTheme() 被呼叫時，會：
+* 在 <html> 根元素上添加 class: "light" 或 "dark"
+* 設定 data-theme 屬性: <html class="light" data-theme="light">
+b) CSS 變數定義
+檔案: src/theme/tailwind-tokens-output.css
+深色模式 (預設) - 第 100-759 行：
+
+/* ===== 色彩模式 - 深色（預設）===== */
+--color-common-bottom-hint: var(--tw-color-gold300);
+--color-common-chip-setting: var(--tw-color-gold100);
+--tw-color-common-bg-content: var(--tw-color-gold800);
+/* ... 更多深色色彩變數 */
+淺色模式 - 第 1762-2100+ 行：
+
+/* 色彩模式 - 淺色 */
+:root.light {
+    --tw-color-common-bottom-hint: var(--tw-color-light-blue-gray300);
+    --tw-color-common-chip-setting: var(--tw-color-light-blue-gray500);
+    --tw-color-common-bg-content: var(--tw-color-light-blue-gray200);
+    /* ... 更多淺色色彩變數 */
+}
+c) Tailwind CSS 整合
+檔案: src/theme/tailwind.css
+專案使用 Tailwind CSS 作為主要樣式框架，並透過自定義 CSS 變數前綴 tw: 使用顏色變數。
+例如：
+
+<div :class="[deviceClass, rootData.themeMode]"></div>
+
+4. 主題初始化流程
+檔案: src/main/ts/useRootView.ts (第 687 行)
+主題在用戶登入後從後端配置初始化：
+
+// 深淺模式：套用 data-theme 到 html 根元素（由 query 參數 ?theme=dark|light 決定）
+Utils.setTheme(bgInfo.theme === "light" ? ThemeMode.LIGHT : ThemeMode.DARK);
+初始化位置: 在 RootView 類別的數據初始化時，根據後端返回的 bgInfo.theme 參數自動設定主題。
+
+5. 相關檔案路徑完整清單
+文件路徑	用途
+src/bundle/common/ts/useRootStore.ts	主題狀態定義與全局數據存儲
+src/bundle/common/ts/utils/Utils.ts	setTheme() 核心方法
+src/bundle/common/ts/hook/useSystemSetting.ts	currentTheme computed 屬性
+src/bundle/common/vue/components/panel/systemSetting/ThemeModeRadioGroup.vue	主題選擇單選按鈕組件
+src/bundle/common/vue/components/dialogs/global/DialogMobileSystemSetting.vue	手機系統設定對話框
+src/bundle/common/vue/components/TestCodePanel.vue	測試用深淺色切換面板
+src/theme/tailwind-tokens-output.css	CSS 變數定義（深色/淺色）
+src/theme/tailwind.css	Tailwind CSS 設定
+src/theme/global.css	全局樣式入口
+src/main/ts/useRootView.ts	主題初始化邏輯
+src/main/main.ts	應用入口
+src/main/vue/App.vue	應用根組件
+index.html	HTML 根元素（應用掛載點）
+6. 運作流程總結
+
+初始化流程：
+┌─────────────────────────────────────────────────┐
+│ 1. useRootView 初始化                           │
+│    └─ bgInfo.theme 從後端讀取                   │
+│                                                  │
+│ 2. Utils.setTheme() 被調用                      │
+│    └─ document.documentElement.classList.add()  │
+│    └─ document.documentElement.setAttribute()   │
+│    └─ rootData.themeMode 更新                   │
+│                                                  │
+│ 3. :root.light 或 :root.dark 選擇器生效        │
+│    └─ CSS 變數重新應用                          │
+│                                                  │
+│ 4. 畫面更新，顯示對應主題色彩                  │
+└─────────────────────────────────────────────────┘
+
+用戶切換流程：
+┌──────────────────────────────────────────────────┐
+│ 1. 用戶點擊 ThemeModeRadioGroup 或 TestCodePanel │
+│                                                   │
+│ 2. 觸發 toggleTheme() 或 onSelect()              │
+│    └─ Utils.setTheme(newTheme)                   │
+│                                                   │
+│ 3. HTML class / data-theme 屬性改變             │
+│    └─ CSS 變數根據選擇器重新應用                │
+│                                                   │
+│ 4. 所有使用 CSS 變數的組件立即更新              │
+└──────────────────────────────────────────────────┘
+
+這專案的深淺模式運作方式如下：
+核心機制
+狀態 存在全局 reactive 物件 useRootStore.ts 的 rootData.themeMode，型別是 ThemeMode enum（"" / "light" / "dark"）。
+切換核心 在 Utils.ts:868 的 setTheme()：
+
+public static setTheme(theme: ThemeMode): void {
+    // 移除舊 class
+    if (rootData.themeMode != ThemeMode.NONE) {
+        document.documentElement.classList.remove(rootData.themeMode);
+    }
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.add(theme);
+    rootData.themeMode = theme;
+}
+也就是在 <html> 根元素上同時加 class（light/dark）和 data-theme 屬性。
+CSS 層面
+用 CSS 變數搭配根選擇器切換，定義在 tailwind-tokens-output.css：
+* 深色是預設（:root 直接定義）
+* 淺色 用 :root.light {} 覆蓋同名變數
+所有元件透過 tw: 前綴的顏色變數（如 tw:bg-black-2）取值，因此切換 <html> 的 class 後，變數重新解析，畫面即時更新，不需重繪元件。
+進入點
+* 初始化：useRootView.ts:687 登入後依後端 bgInfo.theme 呼叫 setTheme()
+* UI 切換：ThemeModeRadioGroup.vue（系統設定裡的淺色/深色選項）、手機版在 DialogMobileSystemSetting.vue
+* 封裝：useSystemSetting.ts 提供 currentTheme 這個可讀寫的 computed，get 讀 rootData.themeMode、set 呼叫 Utils.setTheme()
+流程總結
+setTheme() → 改 <html> 的 class/data-theme → :root.light 選擇器生效 → CSS 變數重新套用 → 用到變數的元件自動更新。
+要我深入看某一塊（例如新增主題色、或某元件怎麼吃這些變數）嗎？
+
+
+
+——
+是的，主要就是 <html lang> 的關係。
+驗證邏輯很簡單：那三行文字是完全一樣的漢字、同樣的 CSS、同樣的 font-family，唯一在切換語系時改變的變數就是 i18n/index.ts:68 把 document.documentElement.lang 改掉了。既然文字和樣式都沒變、只有 lang 變、結果字形就變——那變數就是 lang。
+機制是：漢字落到系統 fallback 字型（-apple-system / sans-serif）時，瀏覽器依 lang 挑地區字形（Han Unification），ja 給日文字形、zh-CN 給簡中字形。
+你可以自己快速驗證：開 DevTools，把 <html> 的 lang 手動從 ja-JP 改成 zh-TW，那三行「籌碼設置」字形會立刻跟著變，但頁面其他東西都不動——這樣就百分百確定是 lang 造成的。
+唯一的但書：如果哪天改成有明確載入、且完整涵蓋這些字的 CJK web font（不走系統 fallback），那 lang 就不會再影響字形。目前專案是走系統 fallback，所以 lang 就是主因。
+
+
+修改密碼功能會搭配 vee-validate zod 
+
+
