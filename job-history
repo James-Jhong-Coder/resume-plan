@@ -300,3 +300,19 @@ Codex Claude cursor 都有用
     但是正常來說應該是每一個 input 都一個紅匡
     不然就是在上方有一個大區塊是一個紅匡
 
+
+
+2026/07/03
+籌碼太大要做 preload
+
+
+
+2026/07/06
+修改密碼介面  如果把 new 出來的 object 的 function assign 到另外一個 variable 裡面，那在掉用裡面的 function 時 this 會失效
+
+打 api 遇到錯誤訊息時，可以在打完 api 之後統一發送到一個接口 showWarning 去做顯示 或是
+
+2026/07/07
+Vite 的功用可以在 prod 移除全站 log
+Git flow 原則
+
