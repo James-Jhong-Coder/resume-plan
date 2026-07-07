@@ -312,7 +312,9 @@ Codex Claude cursor 都有用
 
 打 api 遇到錯誤訊息時，可以在打完 api 之後統一發送到一個接口 showWarning 去做顯示 或是
 
+
 2026/07/07
 Vite 的功用可以在 prod 移除全站 log
 Git flow 原則
+Regex 的 hookhead 原則，可以檢查字串裡面是否有指定的字串
 
