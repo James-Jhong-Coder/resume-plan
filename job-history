@@ -325,3 +325,60 @@ Loading icon 會旋轉
 
 查帳頁面 以前的限制是只能鎖定兩週，但是之前說開到一個月，但是再送了一個月日期條件之後，他送回來的資料還是只有兩個禮拜，但是公司只有前端沒有後端，所以當時花了一些時間在 check 前端的邏輯，但是在找了一段時間之後還是確認沒有問題，才往上呈報，最後才知道說是後端的問題
 
+
+
+
+2026/07/13
+
+縮字會有一些問題，如果有一些地方沒有要縮字，特別是同一排
+但有一塊要縮字那就會造成字體大小不一樣，你就只能針對這一塊客製化縮字方式
+這樣的話你就會先有一塊消耗在
+
+Git 跟別人衝突時，可以先確認一下自己跟別人修改的部分有沒有重疊
+
+
+        :is(.tab-list[data-item-count="2"]) & {
+            margin-left: 90px;
+        }
+        :is(.tab-list[data-item-count="3"]) & {
+            margin-left: 20px;
+            max-width: 210px;
+            white-space: wrap;
+            align-self: flex-end;
+        }
+        :is(.tab-list[data-item-count="4"]) & {
+            margin-left: 20px;
+            max-width: 150px;
+            white-space: wrap;
+            /* align-self: flex-end; */
+        }
+
+
+
+        :is(.tab-list[data-item-count]) &:first-child {
+            margin-left: 0;
+        }
+
+
+
+屬性選擇器 增加權重，搭配 :is 
+
+@font-face {
+    font-family: Inter;
+    font-style: normal;
+    font-weight: 100 900;
+    unicode-range: U+0020-036F, U+0400-0457, U+04AE-04AF, U+04E8-04E9, U+1E00-1EFF, U+2000-202F, U+20A0-20BF, U+2212, U+2713;
+    src:
+        url(/assets/font/interroman-3e0fa3aadc.woff2) format("woff2 supports variations"),
+        url(/assets/font/interroman-3e0fa3aadc.woff2) format("woff2-variations");
+}
+
+字體怎麼 preload
+
+
+
+
+
+
+
+
