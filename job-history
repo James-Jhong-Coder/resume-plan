@@ -471,7 +471,67 @@ QA 討論沒有跟
 4. 選了北京時間，時間要變成是 + 12，美東時間是維持
 
 
+2026/07/23
+工作日誌 2026-07-23
+1. PC 修改密碼介面調整（d11e5b4db）
+細節：
 
+DialogModifyPassword.vue 從純 mobile 樣式改為 PC / H5 雙版型：透過 deviceClass 切換，PC 版縮小為 292×304px、圓角 16px，關閉鈕依 isPC 切換 24px / 50px
+原本頂層的樣式改為包在 .h5 / .pc 巢狀規則內
+取消／確認按鈕文字加上 v-fit-text，避免多語系文字爆版
+同步調整 DialogPCSystemSetting.vue（系統設定入口整合修改密碼）
+延伸問題：
+
+PC 高度寫死 304px，若之後錯誤訊息（error-message）多行或多語系文字較長，可能撐爆或被裁切，需實測各語系
+PC 版仍沿用 DialogMobileBaseLayout 與 mobile 的 overlay transition（panel-overlay-mobile-transition），動畫效果在 PC 上是否符合設計稿需確認
+2. 會員報表送出時間修正（ceb3d7766）
+細節：
+
+useFinancialRecordMediator.ts：creditLiveRabateMode === 1 的會員報表查詢，timeEndString 原本直接用 searchEndDate（隔天 00:00:00），因後端以字串日期做整日查詢，會多查一天；改為 -1000ms 回到所選當天
+延伸問題：
+
+這個修正只套用在 MEMBER_REPORT && creditLiveRabateMode === 1 分支，其他 RecordMode 若後端也是字串日期整日查詢，可能存在相同的多查一天問題，值得盤點
+時區處理依賴 timeZone ?? FinancialTimeZone.EASTERN_TIME，跨時區邊界（例如美東日光節約切換日）的查詢結果建議抽查驗證
+3. UB/UG 信用廳財務報表數字顏色錯誤（85e2564d8，V0.0.0.14）
+細節：
+
+useFinancial.ts 新增 isWinColorFixed 狀態：登入後依 Config.bgInfo.defaultSn 判斷是否為 UB/UG 廳，是則固定「正數白、負數紅」，不顯示紅綠切換鈕，切換語系也不變色（onFinancialLocaleChanged 直接 return）
+isWinRed 預設值從 false 改為 true
+顏色邏輯由 Dialog 層（DialogPCFinancial / DialogMobileFinancial）以 props 往下傳給 PC / Mobile 全部 30 個報表元件（ListItem / Summary / View × 下注、額度、交易、新舊會員報表）
+延伸問題：
+
+isWinColorFixed 是靠 props 一層層傳下去的，30 個元件都要接；之後新增報表類型很容易漏接這個 prop 導致顏色又錯，可考慮改用 provide/inject 或直接在 hook 內消化
+isWinRed 預設值改為 true 影響的是「登入完成前」的初始狀態，若有元件在登入前就渲染，顏色行為與改動前不同，需留意非 UB/UG 廳有無回歸問題
+判斷用 defaultSn 比對 sUG / sUB，若之後有新的固定色廳，這裡是硬編碼清單，需要再改程式
+4. fix lint（cdce897e6）
+HallSelect.vue：移除 allOptions 的對齊用多餘空格、options computed 改單行，純格式修正
+5. PC 聊天室重構（7f07679cf）
+細節：
+
+新增 ChatCollapsedPC.vue（157 行）：收合狀態的單行跑馬訊息，含訊息佇列機制——每條至少顯示 1 秒、300ms 翻轉動畫、items 清空時重置佇列，點擊展開
+新增 ChatExpandedPC.vue（183 行）：展開版聊天視窗，用 CustomDynamicScroller 虛擬捲動；有 isUserScrolling / isProgrammaticScroll 雙旗標區分使用者捲動與程式自動捲底，使用者捲動中不強制捲底，停止 150ms 後恢復
+GameViewBase.ts 補上 chatComp.setUserInfo(userInfo)，聊天元件才拿得到使用者資訊
+CannedMessagePanel / EmojiPanel PC 樣式改用新色票 tw:bg-pc-panel-chat-bg-frame、emoji 格子從 12px 加大到 16px、圓角 9px
+重構 ChatCompPC.vue / ChatCompToolbarPC.vue 配合收合／展開兩態
+延伸問題（本次改動裡最值得追的一包）：
+
+收合佇列塞車：訊息量大時（每秒多於 1 條），ChatCollapsedPC 的佇列只進不丟，會越積越多、顯示嚴重延遲，可能需要「只保留最新 N 條」或動態縮短顯示時間的策略
+onAfterEnter 依賴 Transition：下一條訊息的排程掛在 after-enter 回呼上；若兩條訊息 uuid 相同（key 沒變）transition 不觸發，佇列會卡住不再前進，值得驗證訊息 uuid 的唯一性
+捲動判斷的競態：isProgrammaticScroll 只靠一個 rAF 清除，若捲動動畫超過一個 frame（平滑捲動），後續 scroll 事件會被誤判成使用者捲動，導致新訊息不再自動捲底
+setUserInfo 時序：GameViewBase 是在 user info 更新時才呼叫 chatComp.setUserInfo，重連或換桌流程是否都會走到這條路徑需確認，否則聊天室的「自己的訊息」判斷（isSelf）可能失效
+6. 換桌介面 PC 樣式（ac5bc4dbd）
+SimpleDeskGameCategoryMenu.vue：分類標題加 flex items-center 並固定高 16px，修正文字垂直對齊
+7. 好路提示（fix #967 + 樣式，c310ed933、d52342916，V0.0.0.14）
+細節：
+
+#967 修正：PC 點「好路詳解」原本走 openGoodRoadTipComment（站內彈窗），改為 window.open(Utils.getHelpUrl(HelpType.GOOD_WAY)) 另開分頁；mobile 維持站內彈窗
+樣式：GoodRoadTipItemMobile.vue 改名為共用的 GoodRoadTipItem.vue；「好路詳解」與「全選」文字加 hover 變色（tw:hover:text-panel-body-text-hover）；tailwind.css 的兩個 dialog 關閉鈕 utility（mobile/PC）統一加上 hover 色
+延伸問題：
+
+window.open 在部分瀏覽器彈窗阻擋設定下可能被擋，且回傳值沒有檢查；若被擋使用者會覺得「點了沒反應」，可考慮 fallback 提示
+getHelpUrl(HelpType.GOOD_WAY) 開出的說明頁語系是否跟隨遊戲內語系，建議各語系抽查
+關閉鈕 hover 色是改在共用 utility（common-mobile-dialog-header-icon-close / common-pc-dialog-header-icon-close），影響全站所有 dialog，不只好路提示，需留意其他彈窗有無不該有 hover 效果的場景（特別是 mobile 的 utility 也加了 hover，觸控裝置上點擊後 hover 態會殘留）
+整體待辦建議：PC 聊天室是昨天最大的一包（+411/-74），收合佇列與自動捲底的邊界情境建議補實測；財務顏色的 props 傳遞鏈與共用 utility 的 hover 全站影響是兩個容易被忽略的回歸點。
 
 
 
